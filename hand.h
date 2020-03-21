@@ -30,6 +30,8 @@ public:
     HandState GetState() const;
     void SetState(const HandState &value);
 
+    std::vector<Meld> GetMelds() const;
+
 private:
     std::vector<Meld> melds;
     std::vector<Tile> tiles;

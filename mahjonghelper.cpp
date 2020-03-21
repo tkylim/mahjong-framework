@@ -6,6 +6,7 @@ namespace game {
 
 // Returns sets of 3 tiles length of the return is always a multiple of 3
 std::vector<Meld> MahjongHelper::IsTileChiable(const Hand &hand, Tile discarded) {
+    // TODO: Work with dora 5s
     const std::vector<Tile>& tiles = hand.GetTiles();
     // Check in negative direction
     unsigned char value = discarded.GetNumericalValue();
@@ -49,6 +50,7 @@ bool MahjongHelper::IsTileChaable(const Hand& hand, Tile discarded) {
 }
 
 bool MahjongHelper::IsTileGangable(const Hand& hand, Tile discarded) {
+    // TODO check to see if can be added to meld from packagemanager
     if (std::count(hand.GetTiles().begin(), hand.GetTiles().end(), Tile(0, discarded.GetType())) >= 3)
         return true;
 

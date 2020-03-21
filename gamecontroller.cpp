@@ -30,7 +30,7 @@ Tile GameController::Draw()
 
     Tile t = wallTiles.back();
     wallTiles.pop_back();
-    qDebug() << "Drawn tile" << t.GetType();
+    qDebug() << "Player" << InterpretCurPlayer() << "drew tile" << t.GetType();
     return t;
 }
 
@@ -40,8 +40,7 @@ void GameController::Loop()
 
     // Create wall
     std::vector<Tile> *allTiles = PackageManager::GetInstance().GetAllTiles();
-    for (int i = 0; i < NUM_EACH_TILE; i++)
-        std::copy(allTiles->begin(), allTiles->end(), std::back_inserter(wallTiles));
+    std::copy(allTiles->begin(), allTiles->end(), std::back_inserter(wallTiles));
     delete allTiles;
 
     // TODO fix randomness
@@ -67,8 +66,8 @@ void GameController::Loop()
     while(true) {
         if(Turn()) break;
 
-        curPlayer = GetNextPlayer();
     }
+    qDebug() << "Game finished state: " << gameState;
     // someone won or we ran out of tiles update the next starter
 }
 
@@ -130,11 +129,13 @@ bool GameController::Turn()
     for (unsigned int i = 0; i < PLAYER_NUM; i++) {
         if (MahjongHelper::IsTileGangable(hands[i], discardedTile)) {
             // Offer players[i] a gang
-            // If they accept hands[i].OpenHand(), update the turn counter, go to discard phase
-            qDebug() << "Offered player" << i << "a gang but they declined";
-            if (false) {
+            qDebug() << "Offered player" << i << "a gang";
+            // If accepted
+            if (true) {
+                hands[i].Draw(discardedTile);
                 auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
-                hands[i].AddMeld(Meld(*itFirst, *(itFirst+1), *(itFirst+2), discardedTile));
+                hands[i].AddMeld(Meld(*itFirst, *(itFirst+1), *(itFirst+2), *(itFirst+3)));
+                curPlayer = static_cast<PlayerId>(i);
                 meldOccurredLastTurn = true;
             }
             break; // There can only be one gang
@@ -146,11 +147,14 @@ bool GameController::Turn()
         if (MahjongHelper::IsTileChaable(hands[i], discardedTile)) {
             // Offer players[i] a cha
             qDebug() << "Offered player" << i << "a cha";
+            // If accepted
             if (true) {
                 hands[i].Draw(discardedTile);
                 auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
                 hands[i].AddMeld(Meld(Meld::MeldType::CHA, *itFirst, *(itFirst+1), *(itFirst+2)));
+                curPlayer = static_cast<PlayerId>(i);
                 meldOccurredLastTurn = true;
+                return false;
             }
             break; // There can only be one cha
         }
@@ -161,8 +165,18 @@ bool GameController::Turn()
     std::vector<Meld> chis = MahjongHelper::IsTileChiable(hands[InterpretPlayer(GetNextPlayer())], discardedTile);
     if (!chis.empty()) {
         // Offer GetNextPlayer() a chi
+        // TODO allow chi selection
+        Meld& m = chis[0];
+        qDebug() << "Offered player" << GetNextPlayer() << "a chi";
         if (true) {
+            hands[GetNextPlayer()].Draw(discardedTile);
+            auto itFirst = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetFirst().GetType())));
+            auto itSecond = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetSecond().GetType())));
+            auto itThird = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetThird().GetType())));
+            hands[GetNextPlayer()].AddMeld(Meld(Meld::MeldType::CHI, *itFirst, *itSecond, *itThird));
+            curPlayer = static_cast<PlayerId>(GetNextPlayer());
             meldOccurredLastTurn = true;
+            return false;
         }
     }
 
@@ -172,12 +186,13 @@ bool GameController::Turn()
     // TODO: Should flip a reserved tile and if so for whom?
     // TODO: Replace treasure if
 
+    curPlayer = GetNextPlayer();
     return false;
 }
 
 void GameController::Discard(Tile t)
 {
-    qDebug() << "Discarded tile" << t.GetType();
+    qDebug() << "Player" << InterpretCurPlayer() << "discarded tile" << t.GetType();
     hands[InterpretCurPlayer()].Discard(t);
 }
 
@@ -187,7 +202,7 @@ PlayerId GameController::GetNextPlayer() {
 
 PlayerId GameController::GetNextPlayer(PlayerId p) {
     unsigned char next = p;
-    if (PackageManager::GetInstance().IsRotatingCW()) {
+    if (PackageManager::GetInstance().IsRotatingCw()) {
         if (next == PLAYER_NUM - 1)
             next = 0;
         else

@@ -24,6 +24,11 @@ void Hand::SetState(const Hand::HandState &state)
     this->state = state;
 }
 
+std::vector<Meld> Hand::GetMelds() const
+{
+    return melds;
+}
+
 void Hand::Draw(Tile t)
 {
     tiles.push_back(t);
@@ -51,7 +56,11 @@ void Hand::AddMeld(const Meld& meld)
 {
     if (!IsOpen())
         isOpen = true;
+    tiles.erase(std::find(tiles.begin(), tiles.end(), meld.GetFirst()));
+    tiles.erase(std::find(tiles.begin(), tiles.end(), meld.GetSecond()));
+    tiles.erase(std::find(tiles.begin(), tiles.end(), meld.GetThird()));
+    if (meld.GetType() == Meld::MeldType::GANG)
+        tiles.erase(std::find(tiles.begin(), tiles.end(), meld.GetFourth()));
     melds.push_back(meld);
 }
-
 }

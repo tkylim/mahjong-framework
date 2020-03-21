@@ -12,7 +12,6 @@
 namespace game {
 
 #define PLAYER_NUM 4
-#define NUM_EACH_TILE 4
 #define DEALT_TILES_PER_PLAYER 13
 
 class GameController
