@@ -7,7 +7,7 @@ class Option: # each options catagotized by all possible pairs e.g. pair = [3,3]
         self.pair = pair
         self.threes = threes
         self.series = series
-        self.left = left
+        self.leftovers = leftovers
 
     def __repr__(self):
         return "Pair: " + str(self.pair) + "  Sets: " + str(self.threes) + "  Sequences: " + str(self.series) +  "  Left: " + str(self.leftovers)
@@ -101,7 +101,7 @@ def find_winning_hand(tiles):
                 threes.append(p[0])
                 new_option = Option(option.pair, threes, option.series, p[1])
                 if len(p[1]) == 0:
-                  	s_defined = copy.deepcopy(threes)
+                    s_defined = copy.deepcopy(threes)
                     s_defined.extend(option.series)
                     s_defined = sorted(s_defined)
                     if not(s_defined in completed):
@@ -118,7 +118,7 @@ def find_winning_hand(tiles):
                 series.append(p[0])
                 new_option = Option(option.pair, option.threes, series, p[1])
                 if len(p[1]) == 0:
-                  	s_defined = copy.deepcopy(series)
+                    s_defined = copy.deepcopy(series)
                     s_defined.extend(option.threes)
                     s_defined = sorted(s_defined)
                     if not(s_defined in completed):
@@ -134,7 +134,8 @@ def find_winning_hand(tiles):
         real_wins.append(wh)
     return real_wins
 
-
+tiles = [2,3,4,6,7,8,9,9] #TODO deal with gang situation removed cases
+print(find_winning_hand(tiles))
 
 def Get_Adjacents(target):
     #takes a single target,  and return valid, sorted connections that exists in the tiles
