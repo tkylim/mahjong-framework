@@ -9,6 +9,8 @@
 
 namespace game {
 
+#define NUM_EACH_TILE 4
+
 class PackageManager
 {
 public:
@@ -22,16 +24,18 @@ public:
 
     static unsigned int CalculateScore();
 
-    bool IsRotatingCW() const;
+    bool IsRotatingCw() const;
     bool CanChiOffAnyoneIfOneTileOffOneTileOffState() const;
     unsigned char GetNumOfReservedTiles() const;
     std::vector<Tile> *GetAllTiles() const;
 
 private:
     PackageManager() {}
+    bool GetConfigBool(const char *key, bool& value) const;
+    bool GetConfigInt(const char *key, int& value) const;
 
     std::string pkg;
-    bool isRotatingCW = true;
+    bool isRotatingCw = true;
     bool canChiOffAnyoneIfOneTileOffOneTileOffState = false;
     unsigned char numOfReservedTiles = 0;
     rapidjson::Document configJson;

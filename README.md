@@ -1,0 +1,1 @@
+Flexible cross platform C++ online mahjong framework with GUI done in QT supporting multiple variations through dynamically run packages, which consist of JSON configuration files and Python scripts for scoring, hand validation, etc.

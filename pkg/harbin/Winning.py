@@ -134,7 +134,7 @@ def find_winning_hand(tiles):
         real_wins.append(wh)
     return real_wins
 
-tiles = [2,3,4,6,7,8,9,9] #TODO deal with gang situation removed cases
+tiles = [2,3,4,6,7,8,9,9,11,11,11] #TODO deal with gang situation removed cases
 print(find_winning_hand(tiles))
 
 def Get_Adjacents(target):
