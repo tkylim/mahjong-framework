@@ -17,24 +17,27 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     gamecontroller.cpp \
+    gamewindow.cpp \
+    globals.cpp \
     hand.cpp \
     mahjonghelper.cpp \
     main.cpp \
-    mainwindow.cpp \
     meld.cpp \
-    packagemanager.cpp \
+    networkmanager.cpp \
     player.cpp \
+    resourcemanager.cpp \
     tile.cpp
 
 HEADERS += \
     gamecontroller.h \
+    gamewindow.h \
     globals.h \
     hand.h \
     mahjonghelper.h \
-    mainwindow.h \
     meld.h \
-    packagemanager.h \
+    networkmanager.h \
     player.h \
+    resourcemanager.h \
     tile.h
 
 FORMS += \

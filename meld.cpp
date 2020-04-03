@@ -6,6 +6,18 @@ namespace game {
         type = GANG;
     }
 
+    Meld::Meld(MeldType type, Tile first, Tile second, Tile third) : type(type), first(first), second(second), third(third), fourth(Tile::GetBlankTile())
+    {}
+
+    Meld::Meld() {
+        type = INVALID;
+    }
+
+    Meld Meld::Empty()
+    {
+        return Meld();
+    }
+
     bool Meld::Contains(const Tile& t) const
     {
         return t == first || t == second || t == third || (type == GANG && t == fourth);
@@ -35,7 +47,4 @@ namespace game {
     {
         return type;
     }
-
-    Meld::Meld(MeldType type, Tile first, Tile second, Tile third) : type(type), first(first), second(second), third(third), fourth(Tile(0, Tile::TileType::UNKNOWN))
-    {}
 }

@@ -1,11 +1,13 @@
 #include "gamecontroller.h"
 #include "mahjonghelper.h"
-#include "packagemanager.h"
+#include "resourcemanager.h"
 
 #include <algorithm>
 #include <QDebug>
 
-#include <iostream>
+#include <QEventLoop>
+#include <QTimer>
+#include <windows.h>
 
 namespace game{
 
@@ -39,7 +41,7 @@ void GameController::Loop()
     gameState = SETUP;
 
     // Create wall
-    std::vector<Tile> *allTiles = PackageManager::GetInstance().GetAllTiles();
+    const std::vector<Tile> *allTiles = ResourceManager::GetInstance().GetAllTiles();
     std::copy(allTiles->begin(), allTiles->end(), std::back_inserter(wallTiles));
     delete allTiles;
 
@@ -47,7 +49,7 @@ void GameController::Loop()
     std::random_shuffle(wallTiles.begin(), wallTiles.end());
 
     // Handle treasure slash dora
-    for (unsigned char i = 0; i < PackageManager::GetInstance().GetNumOfReservedTiles(); i++) {
+    for (unsigned char i = 0; i < ResourceManager::GetInstance().GetNumOfReservedTiles(); i++) {
         reservedTiles.push_back(wallTiles.back());
         wallTiles.pop_back();
     }
@@ -65,10 +67,39 @@ void GameController::Loop()
     gameState = MAIN;
     while(true) {
         if(Turn()) break;
-
+        Sleep(uint(100));
     }
     qDebug() << "Game finished state: " << gameState;
     // someone won or we ran out of tiles update the next starter
+}
+
+
+void GameController::Wait(unsigned int durationMs, bool shouldTimeout) {
+    QTimer timer;
+    QEventLoop loop;
+    timer.setSingleShot(true);
+    connect(this, &GameController::UnblockGameController, &loop, &QEventLoop::quit);
+    connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+    timer.start(durationMs);
+    loop.exec();
+
+    // TODO:  deal with timeout
+    if(!shouldTimeout && !timer.isActive())
+        qDebug("Timeout occurred");
+}
+
+void GameController::AwaitUnblockSignal() {
+    Wait(TIMEOUT_MS, false);
+}
+
+void GameController::ReceiveMeldAccepted(Meld meld) {
+    selectedMeld = meld;
+    emit UnblockGameController();
+}
+
+void GameController::ReceiveMeldDeclined() {
+    selectedMeld = Meld::Empty();
+    emit UnblockGameController();
 }
 
 // Returns true when the game should stop
@@ -82,6 +113,11 @@ bool GameController::Turn()
             gameState = EXHAUSTED;
             return true;
         }
+
+        // Render before drawing the tile so the drawn tile can be rendered seperately
+        // TODO:  NetworkManager only send the tile to the player who draws it
+        emit DispatchRenderRequest(curPlayer, hands[InterpretCurPlayer()], RenderCallbackType::TILE_ADDED, drawnTile);
+
         hands[InterpretCurPlayer()].Draw(drawnTile);
 
         // Update current players hand
@@ -95,8 +131,6 @@ bool GameController::Turn()
             gameState = static_cast<GameState>(WIN_EAST + InterpretPlayer(curPlayer));
             return true;
         }
-
-        // Call for render on that specific hand
     }
     else {
         meldOccurredLastTurn = false;
@@ -105,9 +139,11 @@ bool GameController::Turn()
     // Blocking call for request player discard choice
     Tile discardedTile = players[InterpretCurPlayer()].GetDiscardBlocking();
 
+    // TODO:  Actually handle discard
     Discard(discardedTile);
 
     // Call for render
+    emit DispatchRenderRequest(curPlayer, hands[InterpretCurPlayer()], RenderCallbackType::TILE_DISCARDED, discardedTile);
 
     // Update hand states
     PlayerId p = curPlayer;
@@ -128,15 +164,17 @@ bool GameController::Turn()
     // Check for gang
     for (unsigned int i = 0; i < PLAYER_NUM; i++) {
         if (MahjongHelper::IsTileGangable(hands[i], discardedTile)) {
-            // Offer players[i] a gang
             qDebug() << "Offered player" << i << "a gang";
-            // If accepted
-            if (true) {
-                hands[i].Draw(discardedTile);
-                auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
+            hands[i].Draw(discardedTile);
+            auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
+            emit DispatchMeldOffer(static_cast<PlayerId>(i), QVector<Meld>(1, Meld(*itFirst, *(itFirst+1), *(itFirst+2), *(itFirst+3))));
+            AwaitUnblockSignal();
+            if (selectedMeld.GetType() != Meld::MeldType::INVALID) {
                 hands[i].AddMeld(Meld(*itFirst, *(itFirst+1), *(itFirst+2), *(itFirst+3)));
                 curPlayer = static_cast<PlayerId>(i);
                 meldOccurredLastTurn = true;
+                emit DispatchRenderRequest(curPlayer, hands[InterpretCurPlayer()], RenderCallbackType::MELD_ADDED, Tile::GetBlankTile());
+                Wait(INDICATOR_DISPLAY_TIME_MS, true);
             }
             break; // There can only be one gang
         }
@@ -145,15 +183,17 @@ bool GameController::Turn()
     // Check for cha
     for (unsigned int i = 0; i < PLAYER_NUM; i++) {
         if (MahjongHelper::IsTileChaable(hands[i], discardedTile)) {
-            // Offer players[i] a cha
             qDebug() << "Offered player" << i << "a cha";
-            // If accepted
-            if (true) {
-                hands[i].Draw(discardedTile);
-                auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
+            hands[i].Draw(discardedTile);
+            auto itFirst = std::find(hands[i].GetTiles().begin(), hands[i].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(discardedTile.GetType())));
+            emit DispatchMeldOffer(static_cast<PlayerId>(i), QVector<Meld>(1, Meld(Meld::MeldType::CHA, *itFirst, *(itFirst+1), *(itFirst+2))));
+            AwaitUnblockSignal();
+            if (selectedMeld.GetType() != Meld::MeldType::INVALID) {
                 hands[i].AddMeld(Meld(Meld::MeldType::CHA, *itFirst, *(itFirst+1), *(itFirst+2)));
                 curPlayer = static_cast<PlayerId>(i);
                 meldOccurredLastTurn = true;
+                emit DispatchRenderRequest(curPlayer, hands[InterpretCurPlayer()], RenderCallbackType::MELD_ADDED, Tile::GetBlankTile());
+                Wait(INDICATOR_DISPLAY_TIME_MS, true);
                 return false;
             }
             break; // There can only be one cha
@@ -164,18 +204,19 @@ bool GameController::Turn()
     // TODO:  Deal with Harbin's awful rule about chi from anywhere to be in kou ting if your hand is closed
     std::vector<Meld> chis = MahjongHelper::IsTileChiable(hands[InterpretPlayer(GetNextPlayer())], discardedTile);
     if (!chis.empty()) {
-        // Offer GetNextPlayer() a chi
-        // TODO allow chi selection
-        Meld& m = chis[0];
         qDebug() << "Offered player" << GetNextPlayer() << "a chi";
-        if (true) {
+        emit DispatchMeldOffer(GetNextPlayer(), QVector<Meld>::fromStdVector(chis));
+        AwaitUnblockSignal();
+        if (selectedMeld.GetType() != Meld::MeldType::INVALID) {
             hands[GetNextPlayer()].Draw(discardedTile);
-            auto itFirst = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetFirst().GetType())));
-            auto itSecond = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetSecond().GetType())));
-            auto itThird = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(m.GetThird().GetType())));
+            auto itFirst = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(selectedMeld.GetFirst().GetType())));
+            auto itSecond = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(selectedMeld.GetSecond().GetType())));
+            auto itThird = std::find(hands[GetNextPlayer()].GetTiles().begin(), hands[GetNextPlayer()].GetTiles().end(), Tile(0, static_cast<Tile::TileType>(selectedMeld.GetThird().GetType())));
             hands[GetNextPlayer()].AddMeld(Meld(Meld::MeldType::CHI, *itFirst, *itSecond, *itThird));
             curPlayer = static_cast<PlayerId>(GetNextPlayer());
             meldOccurredLastTurn = true;
+            emit DispatchRenderRequest(curPlayer, hands[InterpretCurPlayer()], RenderCallbackType::MELD_ADDED, Tile::GetBlankTile());
+            Wait(INDICATOR_DISPLAY_TIME_MS, true);
             return false;
         }
     }
@@ -183,7 +224,7 @@ bool GameController::Turn()
     // Send rendering/UI update to allow players to select options
     // TODO: Deal with cha and chi at the same time
 
-    // TODO: Should flip a reserved tile and if so for whom?
+    // TODO: Should flip a reserved tile and if so for whom? Let's do this through calling the updatehand function
     // TODO: Replace treasure if
 
     curPlayer = GetNextPlayer();
@@ -202,7 +243,7 @@ PlayerId GameController::GetNextPlayer() {
 
 PlayerId GameController::GetNextPlayer(PlayerId p) {
     unsigned char next = p;
-    if (PackageManager::GetInstance().IsRotatingCw()) {
+    if (ResourceManager::GetInstance().IsRotatingCw()) {
         if (next == PLAYER_NUM - 1)
             next = 0;
         else

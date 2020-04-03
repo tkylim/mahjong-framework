@@ -13,6 +13,9 @@ class Hand
 {
 public:
     Hand();
+    ~Hand() = default;
+    Hand(const Hand&) = default;
+    Hand &operator=(const Hand&) = default;
 
     enum HandState {
         NORMAL,
@@ -40,5 +43,7 @@ private:
 };
 
 }
+
+Q_DECLARE_METATYPE(game::Hand);
 
 #endif // HAND_H

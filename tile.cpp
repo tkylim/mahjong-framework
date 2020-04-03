@@ -2,8 +2,19 @@
 
 namespace game {
 
+Tile::Tile()
+{
+    id = 0;
+    type = Tile::TileType::UNKNOWN;
+}
+
 Tile::Tile(unsigned int id, Tile::TileType type) : id(id), type(type)
 {
+}
+
+Tile Tile::GetBlankTile()
+{
+    return Tile();
 }
 
 Tile::TileType Tile::GetType() const {

@@ -31,6 +31,7 @@ std::vector<Meld> Hand::GetMelds() const
 
 void Hand::Draw(Tile t)
 {
+    // TODO:  On draw check gang and autoplay if flag set in packagemanager
     tiles.push_back(t);
     std::sort(tiles.begin(), tiles.end());
 }

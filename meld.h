@@ -1,6 +1,8 @@
 #ifndef MELD_H
 #define MELD_H
 
+#include <QVector>
+
 #include "tile.h"
 
 namespace game {
@@ -11,11 +13,15 @@ public:
     enum MeldType {
         CHI,
         CHA,
-        GANG
+        GANG,
+        INVALID
     };
 
+    Meld();
     Meld(MeldType type, Tile first, Tile second, Tile third);
     Meld(Tile first, Tile second, Tile third, Tile fourth); // Gang
+
+    static Meld Empty();
 
     bool Contains(const Tile& t) const;
 
@@ -39,4 +45,8 @@ private:
 
 }
 
+typedef QVector<game::Meld> Melds;
+
+Q_DECLARE_METATYPE(Melds)
+Q_DECLARE_METATYPE(game::Meld);
 #endif // MELD_H

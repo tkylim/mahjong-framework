@@ -1,6 +1,8 @@
 #ifndef TILE_H
 #define TILE_H
 
+#include <QMetaType>
+
 namespace game {
 
 class Tile
@@ -52,7 +54,10 @@ public:
     };
 
 public:
+    Tile();
     Tile(unsigned int id, Tile::TileType type);
+
+    static Tile GetBlankTile();
 
     TileType GetType() const;
     unsigned int GetId() const ;
@@ -68,5 +73,6 @@ private:
 };
 
 }
+Q_DECLARE_METATYPE(game::Tile);
 
 #endif // TILE_H
